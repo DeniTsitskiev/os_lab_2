@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <sys/time.h>  // Добавлен для gettimeofday()
 
 #define MAX_THREADS 16
 
@@ -232,7 +233,7 @@ int load_system_from_file(const char *filename) {
 void print_help() {
     printf("\n=== Решатель систем линейных уравнений методом Гаусса ===\n\n");
     printf("Использование:\n");
-    printf("  %s <файл_матрицы> <количество_потоков>\n", "main");
+    printf("  %s <файл_матрицы> <количество_потоков>\n", "main_solve");
     printf("\nАргументы:\n");
     printf("  файл_матрицы    - файл с матрицей системы (создается generate_matrix)\n");
     printf("  количество_потоков - число потоков для параллельных вычислений (1-%d)\n", MAX_THREADS);
@@ -242,6 +243,19 @@ void print_help() {
     printf("\nДля генерации матриц используйте generate_matrix:\n");
     printf("  generate_matrix 5 system5.txt 1\n");
     printf("  generate_matrix 10 system10.txt 2\n");
+}
+
+/**
+ * Получение текущего времени в секундах с высокой точностью
+ * Используется для измерения настенного времени
+ */
+double get_wall_time() {
+    struct timeval time;
+    if (gettimeofday(&time, NULL)) {
+        // Обработка ошибки, если gettimeofday не сработал
+        return 0;
+    }
+    return (double)time.tv_sec + (double)time.tv_usec * 1e-6;
 }
 
 /**
@@ -281,8 +295,8 @@ int main(int argc, char *argv[]) {
         printf("\nМатрица слишком велика для отображения (n=%d)\n", n);
     }
     
-    // Шаг 3: Замер времени начала вычислений
-    clock_t start_time = clock();
+    // Шаг 3: Замер времени начала вычислений (настенное время)
+    double start_time = get_wall_time();
     
     // Шаг 4: Прямой ход метода Гаусса (может быть параллельным)
     forward_elimination();
@@ -297,8 +311,8 @@ int main(int argc, char *argv[]) {
     back_substitution();
     
     // Шаг 7: Замер времени окончания вычислений
-    clock_t end_time = clock();
-    double execution_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    double end_time = get_wall_time();
+    double execution_time = end_time - start_time;
     
     // Шаг 8: Вывод результатов
     printf("\n=== РЕЗУЛЬТАТЫ ===\n");
@@ -312,14 +326,14 @@ int main(int argc, char *argv[]) {
         printf("... (всего %d компонент)\n", n);
     }
     
-    
-    // Шаг 10: Вывод информации о производительности
+    // Шаг 9: Вывод информации о производительности
     printf("\n=== ПРОИЗВОДИТЕЛЬНОСТЬ ===\n");
     printf("Время выполнения: %.6f секунд\n", execution_time);
     printf("Размер системы: %d уравнений\n", n);
     printf("Использовано потоков: %d\n", thread_count);
     
-    // Шаг 11: Освобождение памяти
+    
+    // Шаг 10: Освобождение памяти
     for (int i = 0; i < n; i++) {
         free(matrix[i]);
     }
